@@ -16,6 +16,20 @@ export class UsersService {
     return this._usersRepository.getUserByEmail(email);
   }
 
+  createUserWithoutOrg(
+    email: string,
+    name: string,
+    providerId: string,
+    provider: Provider
+  ) {
+    return this._usersRepository.createUserWithoutOrg(
+      email,
+      name,
+      providerId,
+      provider
+    );
+  }
+
   getUserById(id: string) {
     return this._usersRepository.getUserById(id);
   }
