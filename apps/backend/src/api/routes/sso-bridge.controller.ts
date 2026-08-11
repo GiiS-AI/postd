@@ -34,6 +34,7 @@ export class SsoBridgeController {
         name: string;
         externalId: string;
         expires: number;
+        redirectPath?: string;
       };
 
       if (!payload?.email || !payload?.externalId || !payload?.expires) {
@@ -44,6 +45,19 @@ export class SsoBridgeController {
       if (Date.now() > payload.expires) {
         response.status(400).send('Token expired');
         return;
+      }
+
+      // Validate redirectPath defensively if present
+      let safeRedirectPath = '/';
+      if (payload.redirectPath) {
+        // Must start with exactly one '/', not '//' (reject protocol-relative redirects)
+        if (
+          typeof payload.redirectPath === 'string' &&
+          payload.redirectPath.startsWith('/') &&
+          !payload.redirectPath.startsWith('//')
+        ) {
+          safeRedirectPath = payload.redirectPath;
+        }
       }
 
       let user = await this._usersService.getUserByProvider(
@@ -89,7 +103,7 @@ export class SsoBridgeController {
         response.header('auth', jwt);
       }
 
-      response.redirect(process.env.FRONTEND_URL!);
+      response.redirect(process.env.FRONTEND_URL! + safeRedirectPath);
     } catch (err) {
       response.status(400).send('Invalid or expired token');
     }
