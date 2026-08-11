@@ -389,6 +389,14 @@ export const AddProviderComponent: FC<{
   const router = useRouter();
   const fetch = useFetch();
   const modal = useModals();
+  // Embedded inside GiiS's own app (see new-layout/layout.component.tsx for
+  // the matching check there). Same underlying reason as the isMobile
+  // special-case just below: OAuth providers (LinkedIn, Google, etc.) send
+  // X-Frame-Options/frame-ancestors headers that refuse to render inside an
+  // iframe, so navigating this frame directly to the provider's URL yields a
+  // blank page instead of their consent screen - confirmed live.
+  const isEmbedded =
+    typeof window !== 'undefined' && window.self !== window.top;
   const getSocialLink = useCallback(
     (
         invite: boolean,
@@ -494,6 +502,11 @@ export const AddProviderComponent: FC<{
               rn.postMessage(JSON.stringify({ type: 'open-external', url }));
               return;
             }
+            window.open(url, '_blank');
+            return;
+          }
+
+          if (isEmbedded) {
             window.open(url, '_blank');
             return;
           }
