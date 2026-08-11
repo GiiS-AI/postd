@@ -389,6 +389,20 @@ export const AddProviderComponent: FC<{
   const router = useRouter();
   const fetch = useFetch();
   const modal = useModals();
+  // Embedded inside GiiS's own app (see new-layout/layout.component.tsx for
+  // the matching check there). window.location.href here navigates only
+  // this iframe - confirmed live that the desktop app's navigation
+  // interception (which redirects OAuth providers to the system browser,
+  // since they refuse to render inside a frame) only ever fires for the
+  // outer page's own navigation, not a nested iframe's. window.top.location
+  // is the standard, deliberately-permitted way to navigate the top-level
+  // page from inside a cross-origin iframe (writing is allowed even though
+  // reading window.top.location cross-origin is not) - this makes the OAuth
+  // navigation attempt visible to the outer chat.giis.ai page, where the
+  // desktop app's handler can catch it, send it to the system browser, and
+  // cancel the in-app navigation, leaving GiiS itself untouched.
+  const isEmbedded =
+    typeof window !== 'undefined' && window.self !== window.top;
   const getSocialLink = useCallback(
     (
         invite: boolean,
@@ -495,6 +509,11 @@ export const AddProviderComponent: FC<{
               return;
             }
             window.open(url, '_blank');
+            return;
+          }
+
+          if (isEmbedded && window.top) {
+            window.top.location.href = url;
             return;
           }
 
