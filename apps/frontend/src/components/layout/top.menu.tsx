@@ -246,9 +246,11 @@ export const useMenuItem = () => {
           />
         </svg>
       ),
-      path: 'https://affiliate.postiz.com',
+      // Affiliate program not available for GiiS deployment (was https://affiliate.postiz.com)
+      path: '#',
       role: ['ADMIN', 'SUPERADMIN', 'USER'],
       requireBilling: true,
+      hide: true,
     },
     {
       name: t('billing', 'Billing'),

@@ -218,22 +218,14 @@ export function RegisterAfter({
                   'By registering you agree to our'
                 )}
                 &nbsp;
-                <a
-                  href={`https://postiz.com/terms`}
-                  className="underline hover:font-bold"
-                  rel="nofollow"
-                >
+                <span className="underline">
                   {t('terms_of_service', 'Terms of Service')}
-                </a>
+                </span>
                 &nbsp;
                 {t('and', 'and')}&nbsp;
-                <a
-                  href={`https://postiz.com/privacy`}
-                  rel="nofollow"
-                  className="underline hover:font-bold"
-                >
+                <span className="underline">
                   {t('privacy_policy', 'Privacy Policy')}
-                </a>
+                </span>
                 &nbsp;
               </div>
               <div className="text-center mt-6">
