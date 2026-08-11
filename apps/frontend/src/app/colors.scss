@@ -1,29 +1,35 @@
 :root {
+  // Overridden below to match GiiS's own dark-mode design tokens (see
+  // Chat-v0.4-Beta-main/web/src/app/css/colors.css) - a minimal, monochrome
+  // white-on-near-black palette, not the original saturated purple/magenta
+  // Postiz brand accents. Platform-specific brand colors (LinkedIn/Facebook/
+  // Instagram/TikTok/YouTube, below) are intentionally left untouched - those
+  // represent the external platforms themselves, not Postd/GiiS branding.
   .dark {
     --new-back-drop: #000;
-    --new-settings: #242323;
-    --new-border: #252525;
-    --new-bgColor: #0e0e0e;
-    --new-bgColorInner: #1a1919;
-    --new-sep: #454444;
-    --new-bgLineColor: #212121;
-    --new-textItemFocused: #1a1919;
+    --new-settings: #1a1a1a;
+    --new-border: #333333;
+    --new-bgColor: #000000;
+    --new-bgColorInner: #1a1a1a;
+    --new-sep: #4d4d4d;
+    --new-bgLineColor: #262626;
+    --new-textItemFocused: #1a1a1a;
     --new-textItemBlur: #999999;
     --new-boxFocused: #fff;
     --new-textColor: 255 255 255;
-    --new-blockSeparator: #272626;
-    --new-btn-simple: #313030;
-    --new-btn-text: #ffffff;
-    --new-btn-primary: #612bd3;
-    --new-ai-btn: #d82d7e;
-    --new-box-hover: #201f1f;
-    --new-table-border: #2b2b2b;
-    --new-table-header: #1e1d1d;
+    --new-blockSeparator: #262626;
+    --new-btn-simple: #333333;
+    --new-btn-text: #0e0e0e;
+    --new-btn-primary: #ffffff;
+    --new-ai-btn: #e9e9e9;
+    --new-box-hover: #262626;
+    --new-table-border: #333333;
+    --new-table-header: #1a1a1a;
     --new-table-text: #9c9c9c;
-    --new-table-text-focused: #fc69ff;
-    --new-small-strips: #191818;
-    --new-big-strips: #161515;
-    --new-col-color: #2c2b2b;
+    --new-table-text-focused: #ffffff;
+    --new-small-strips: #141414;
+    --new-big-strips: #0f0f0f;
+    --new-col-color: #333333;
     --new-menu-dots: #696868;
     --new-menu-hover: #fff;
     --menu-shadow: 0 8px 30px 0 rgba(0, 0, 0, 0.5);

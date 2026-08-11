@@ -2,7 +2,11 @@
 
 import React, { ReactNode, useCallback } from 'react';
 import { Logo } from '@gitroom/frontend/components/new-layout/logo';
-import { Plus_Jakarta_Sans } from 'next/font/google';
+// GiiS's own web app uses Hanken Grotesk as its sans-serif font (see
+// Chat-v0.4-Beta-main/web/tailwind-themes/tailwind.config.js) - matched here
+// instead of Postiz's original Plus Jakarta Sans so embedded Postd content
+// reads consistently with the rest of the GiiS app around it.
+import { Hanken_Grotesk } from 'next/font/google';
 const ModeComponent = dynamic(
   () => import('@gitroom/frontend/components/layout/mode.component'),
   {
@@ -43,7 +47,7 @@ import { AttachToFeedbackIcon } from '@gitroom/frontend/components/new-layout/se
 import { FirstBillingComponent } from '@gitroom/frontend/components/billing/first.billing.component';
 import { TrialTracker } from '@gitroom/frontend/components/layout/gtm.component';
 
-const jakartaSans = Plus_Jakarta_Sans({
+const hankenGrotesk = Hanken_Grotesk({
   weight: ['600', '500', '700'],
   style: ['normal', 'italic'],
   subsets: ['latin'],
@@ -103,7 +107,7 @@ export const LayoutComponent = ({ children }: { children: ReactNode }) => {
             <div
               className={clsx(
                 'flex flex-col min-h-screen min-w-screen text-newTextColor p-[12px]',
-                jakartaSans.className
+                hankenGrotesk.className
               )}
             >
               <div>{user?.admin ? <Impersonate /> : <div />}</div>
