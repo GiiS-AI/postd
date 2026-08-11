@@ -69,6 +69,18 @@ export const LayoutComponent = ({ children }: { children: ReactNode }) => {
 
   if (!user) return null;
 
+  // Embedded inside GiiS's own app (see /app/postd in the GiiS frontend): GiiS
+  // already renders its own Calendar/Analytics/Media/Plugins/Integrations/
+  // Settings sidebar section that drives which page loads in this iframe, so
+  // this component's own icon-column nav would just be a second, disconnected
+  // copy of the same navigation - clicking it wouldn't update GiiS's own
+  // sidebar highlighting. Safe to check window directly (no effect/state
+  // needed): this whole component only ever renders client-side, gated on
+  // `user` above, so there's no server-rendered version of this subtree to
+  // hydration-mismatch against.
+  const isEmbedded =
+    typeof window !== 'undefined' && window.self !== window.top;
+
   return (
     <ContextWrapper user={user}>
       <CopilotKit
@@ -101,21 +113,23 @@ export const LayoutComponent = ({ children }: { children: ReactNode }) => {
                 <>
                   <AnnouncementBanner />
                   <div className="flex-1 flex gap-[8px]">
-                    <Support />
-                    <div className="flex flex-col bg-newBgColorInner w-[80px] rounded-[12px]">
-                      <div
-                        id="left-menu"
-                        className={clsx(
-                          'fixed h-full w-[64px] start-[17px] flex flex-1 top-0',
-                          user?.admin && 'pt-[60px] max-h-[1000px]:w-[500px]'
-                        )}
-                      >
-                        <div className="flex flex-col h-full gap-[32px] flex-1 py-[12px]">
-                          <Logo />
-                          <TopMenu />
+                    {!isEmbedded && <Support />}
+                    {!isEmbedded && (
+                      <div className="flex flex-col bg-newBgColorInner w-[80px] rounded-[12px]">
+                        <div
+                          id="left-menu"
+                          className={clsx(
+                            'fixed h-full w-[64px] start-[17px] flex flex-1 top-0',
+                            user?.admin && 'pt-[60px] max-h-[1000px]:w-[500px]'
+                          )}
+                        >
+                          <div className="flex flex-col h-full gap-[32px] flex-1 py-[12px]">
+                            <Logo />
+                            <TopMenu />
+                          </div>
                         </div>
                       </div>
-                    </div>
+                    )}
                     <div className="flex-1 bg-newBgLineColor rounded-[12px] overflow-hidden flex flex-col gap-[1px] blurMe">
                       <div className="flex bg-newBgColorInner h-[80px] px-[20px] items-center">
                         <div className="text-[24px] font-[600] flex flex-1">
