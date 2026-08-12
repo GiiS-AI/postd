@@ -31,15 +31,18 @@ export class LinkedinProvider extends SocialAbstract implements SocialProvider {
   oneTimeToken = true;
 
   isBetweenSteps = false;
-  scopes = [
-    'openid',
-    'profile',
-    'w_member_social',
-    'r_basicprofile',
-    'rw_organization_admin',
-    'w_organization_social',
-    'r_organization_social',
-  ];
+  // Deliberately NOT the organization scopes (rw_organization_admin,
+  // w_organization_social, r_organization_social) - those are only relevant
+  // to LinkedinPageProvider (company pages), which re-declares its own full
+  // scope list independently below. Requesting them here for a personal
+  // profile connection makes LinkedIn reject the *entire* auth request with
+  // invalid_scope_error unless the app has separately been approved for the
+  // Community Management API product - a real, non-instant approval process
+  // that has nothing to do with posting to one's own personal profile.
+  // Confirmed live: personal LinkedIn connect failed with exactly that error
+  // until this was narrowed to only the scopes "Sign In with LinkedIn using
+  // OpenID Connect" + "Share on LinkedIn" (both self-serve/instant) cover.
+  scopes = ['openid', 'profile', 'w_member_social', 'r_basicprofile'];
   override maxConcurrentJob = 2; // LinkedIn has professional posting limits
   refreshWait = true;
   editor = 'normal' as const;
