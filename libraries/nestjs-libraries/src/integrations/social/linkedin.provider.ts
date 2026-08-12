@@ -39,10 +39,16 @@ export class LinkedinProvider extends SocialAbstract implements SocialProvider {
   // invalid_scope_error unless the app has separately been approved for the
   // Community Management API product - a real, non-instant approval process
   // that has nothing to do with posting to one's own personal profile.
-  // Confirmed live: personal LinkedIn connect failed with exactly that error
-  // until this was narrowed to only the scopes "Sign In with LinkedIn using
-  // OpenID Connect" + "Share on LinkedIn" (both self-serve/instant) cover.
-  scopes = ['openid', 'profile', 'w_member_social', 'r_basicprofile'];
+  //
+  // Also deliberately NOT r_basicprofile: that's a pre-OIDC-era scope name,
+  // not covered by the "Sign In with LinkedIn using OpenID Connect" product
+  // (confirmed live - even after dropping the organization scopes above,
+  // the exact same invalid_scope_error persisted until this was removed
+  // too). openid + profile (real OIDC scopes) already provide id/name/
+  // picture via /v2/userinfo; the one thing r_basicprofile bought us was
+  // vanityName from the legacy /v2/me endpoint (see authenticate() and
+  // refreshToken() below), which is now best-effort/optional.
+  scopes = ['openid', 'profile', 'w_member_social'];
   override maxConcurrentJob = 2; // LinkedIn has professional posting limits
   refreshWait = true;
   editor = 'normal' as const;
@@ -98,6 +104,30 @@ export class LinkedinProvider extends SocialAbstract implements SocialProvider {
     return undefined;
   }
 
+  // /v2/me (and its vanityName field) needs r_basicprofile, which this
+  // provider no longer requests (see the scopes comment above) - without
+  // it LinkedIn returns a 403 here. Best-effort only: username is a nice-
+  // to-have display field, not something the rest of the integration
+  // depends on, so a failure here must not break the whole auth flow.
+  private async fetchVanityName(
+    accessToken: string
+  ): Promise<string | undefined> {
+    try {
+      const response = await fetch('https://api.linkedin.com/v2/me', {
+        headers: {
+          Authorization: `Bearer ${accessToken}`,
+        },
+      });
+      if (!response.ok) {
+        return undefined;
+      }
+      const { vanityName } = await response.json();
+      return vanityName;
+    } catch {
+      return undefined;
+    }
+  }
+
   async refreshToken(refresh_token: string): Promise<AuthTokenDetails> {
     const {
       access_token: accessToken,
@@ -118,13 +148,7 @@ export class LinkedinProvider extends SocialAbstract implements SocialProvider {
       })
     ).json();
 
-    const { vanityName } = await (
-      await fetch('https://api.linkedin.com/v2/me', {
-        headers: {
-          Authorization: `Bearer ${accessToken}`,
-        },
-      })
-    ).json();
+    const vanityName = await this.fetchVanityName(accessToken);
 
     const {
       name,
@@ -210,13 +234,7 @@ export class LinkedinProvider extends SocialAbstract implements SocialProvider {
       })
     ).json();
 
-    const { vanityName } = await (
-      await fetch('https://api.linkedin.com/v2/me', {
-        headers: {
-          Authorization: `Bearer ${accessToken}`,
-        },
-      })
-    ).json();
+    const vanityName = await this.fetchVanityName(accessToken);
 
     return {
       id,
