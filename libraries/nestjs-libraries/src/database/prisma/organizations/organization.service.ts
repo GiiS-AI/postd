@@ -28,6 +28,13 @@ export class OrganizationService {
     );
   }
 
+  createOrgForExistingUser(userId: string, orgName: string) {
+    return this._organizationRepository.createOrgForExistingUser(
+      userId,
+      orgName
+    );
+  }
+
   async getCount() {
     return this._organizationRepository.getCount();
   }

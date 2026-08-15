@@ -300,6 +300,30 @@ export class OrganizationRepository {
     });
   }
 
+  async createOrgForExistingUser(userId: string, orgName: string) {
+    return this._organization.model.organization.create({
+      data: {
+        name: orgName,
+        apiKey: AuthService.fixedEncryption(makeId(20)),
+        allowTrial: true,
+        isTrailing: true,
+        users: {
+          create: {
+            role: Role.SUPERADMIN,
+            user: {
+              connect: {
+                id: userId,
+              },
+            },
+          },
+        },
+      },
+      select: {
+        id: true,
+      },
+    });
+  }
+
   getOrgByCustomerId(customerId: string) {
     return this._organization.model.organization.findFirst({
       where: {

@@ -1,14 +1,11 @@
 import { Controller, Get, Query, Res } from '@nestjs/common';
 import { Response } from 'express';
 import { ApiTags } from '@nestjs/swagger';
-import { randomUUID } from 'crypto';
 import { Provider } from '@prisma/client';
 import { AuthService as AuthChecker } from '@gitroom/helpers/auth/auth.service';
 import { getCookieUrlFromDomain } from '@gitroom/helpers/subdomain/subdomain.management';
 import { UsersService } from '@gitroom/nestjs-libraries/database/prisma/users/users.service';
 import { OrganizationService } from '@gitroom/nestjs-libraries/database/prisma/organizations/organization.service';
-
-const SSO_BRIDGE_SHARED_ORG_ID = 'd1987299-51b1-436c-8ae1-fd287827b718';
 
 @ApiTags('SsoBridge')
 @Controller('/sso')
@@ -73,11 +70,9 @@ export class SsoBridgeController {
           Provider.GENERIC
         );
 
-        await this._organizationService.addUserToOrg(
+        await this._organizationService.createOrgForExistingUser(
           user.id,
-          randomUUID(),
-          SSO_BRIDGE_SHARED_ORG_ID,
-          'USER'
+          `${payload.name || payload.email}'s Workspace`
         );
       }
 
