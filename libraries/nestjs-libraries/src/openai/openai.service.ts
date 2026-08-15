@@ -3,6 +3,7 @@ import OpenAI from 'openai';
 import { shuffle } from 'lodash';
 import { zodResponseFormat } from 'openai/helpers/zod';
 import { z } from 'zod';
+import { GiisLlmService } from '@gitroom/nestjs-libraries/openai/giis-llm.service';
 
 const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY || 'sk-proj-',
@@ -18,6 +19,8 @@ const VoicePrompt = z.object({
 
 @Injectable()
 export class OpenaiService {
+  constructor(private _giisLlmService: GiisLlmService) {}
+
   async generateImage(prompt: string, isVertical = false) {
     // gpt-image models always return base64 (b64_json) and do not accept the
     // `response_format` parameter, unlike the deprecated dall-e-3.
@@ -74,7 +77,58 @@ export class OpenaiService {
     );
   }
 
-  async generatePosts(content: string) {
+  async generatePosts(content: string, giisUserId?: string | null) {
+    const responseFormat = {
+      type: 'json_schema',
+      json_schema: {
+        name: 'postd_caption_groups',
+        strict: true,
+        schema: {
+          type: 'object',
+          additionalProperties: false,
+          properties: {
+            groups: {
+              type: 'array',
+              minItems: 1,
+              items: {
+                type: 'array',
+                minItems: 1,
+                items: {
+                  type: 'object',
+                  additionalProperties: false,
+                  properties: {
+                    post: {
+                      type: 'string',
+                    },
+                  },
+                  required: ['post'],
+                },
+              },
+            },
+          },
+          required: ['groups'],
+        },
+      },
+    };
+
+    const singlePosts = await this._giisLlmService.generateText(
+      giisUserId,
+      `Generate 5 different Twitter post options from the content below. Do not use emojis. Return JSON only in this shape: {"groups":[[{"post":"..."}]]}. Each group must contain exactly one post.\n\nContent:\n${content!}`,
+      responseFormat
+    );
+    const threadPosts = await this._giisLlmService.generateText(
+      giisUserId,
+      `Generate 5 different social media thread options from the content below. Do not use emojis. Return JSON only in this shape: {"groups":[[{"post":"..."},{"post":"..."}]]}. Each group must contain at least two posts.\n\nContent:\n${content!}`,
+      responseFormat
+    );
+
+    return shuffle([
+      ...this.parseGeneratedPostGroups(singlePosts),
+      ...this.parseGeneratedPostGroups(threadPosts),
+    ]);
+  }
+
+  private async generatePostsWithOpenAi(content: string) {
     const posts = (
       await Promise.all([
         openai.chat.completions.create({
@@ -132,6 +186,55 @@ export class OpenaiService {
       })
     );
   }
+
+  private parseGeneratedPostGroups(content: string) {
+    try {
+      const parsed = JSON.parse(content);
+      if (Array.isArray(parsed?.groups)) {
+        return parsed.groups.filter(
+          (group: unknown) =>
+            Array.isArray(group) &&
+            group.every(
+              (post) =>
+                post &&
+                typeof post === 'object' &&
+                typeof (post as { post?: unknown }).post === 'string'
+            )
+        );
+      }
+
+      if (
+        Array.isArray(parsed) &&
+        parsed.every(
+          (post) =>
+            post &&
+            typeof post === 'object' &&
+            typeof (post as { post?: unknown }).post === 'string'
+        )
+      ) {
+        return [parsed];
+      }
+    } catch (e) {
+      const start = content?.indexOf('[')!;
+      const end = content?.lastIndexOf(']')!;
+      try {
+        return [
+          JSON.parse(
+            '[' +
+              content
+                ?.slice(start + 1, end)
+                .replace(/\n/g, ' ')
+                .replace(/ {2,}/g, ' ') +
+              ']'
+          ),
+        ];
+      } catch (err) {
+        return [];
+      }
+    }
+
+    return [];
+  }
   async extractWebsiteText(content: string) {
     const websiteContent = await openai.chat.completions.create({
       messages: [
@@ -150,7 +253,7 @@ export class OpenaiService {
 
     const { content: articleContent } = websiteContent.choices[0].message;
 
-    return this.generatePosts(articleContent!);
+    return this.generatePostsWithOpenAi(articleContent!);
   }
 
   async separatePosts(content: string, len: number) {

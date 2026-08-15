@@ -15,10 +15,6 @@ import Parser from 'rss-parser';
 import { IntegrationService } from '@gitroom/nestjs-libraries/database/prisma/integrations/integration.service';
 import { makeId } from '@gitroom/nestjs-libraries/services/make.is';
 import { TemporalService } from 'nestjs-temporal-core';
-import { TypedSearchAttributes } from '@temporalio/common';
-import {
-  organizationId,
-} from '@gitroom/nestjs-libraries/temporal/temporal.search.attribute';
 const parser = new Parser();
 
 interface WorkflowChannelsState {
@@ -109,12 +105,6 @@ export class AutopostService {
             workflowId: `autopost-${id}`,
             taskQueue: 'main',
             args: [{ id, immediately: true }],
-            typedSearchAttributes: new TypedSearchAttributes([
-              {
-                key: organizationId,
-                value: orgId,
-              },
-            ]),
           });
       } catch (err) {}
     }

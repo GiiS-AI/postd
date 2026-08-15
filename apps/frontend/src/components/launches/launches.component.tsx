@@ -26,6 +26,7 @@ import { useT } from '@gitroom/react/translation/get.transation.service.client';
 import { useIntegrationList } from '@gitroom/frontend/components/launches/helpers/use.integration.list';
 import useCookie from 'react-use-cookie';
 import { Onboarding } from '@gitroom/frontend/components/onboarding/onboarding';
+import { isEmbeddedInGiiS } from '@gitroom/frontend/components/billing/giis-billing-redirect';
 
 export const SVGLine = () => {
   return (
@@ -362,6 +363,7 @@ export const LaunchesComponent = () => {
   const [collapseMenu, setCollapseMenu] = useCookie('collapseMenu', '0');
   const [mode] = useCookie('mode', 'dark');
   const { isLoading, data: integrations, mutate } = useIntegrationList();
+  const isEmbedded = isEmbeddedInGiiS();
 
   const totalNonDisabledChannels = useMemo(() => {
     return (
@@ -429,6 +431,16 @@ export const LaunchesComponent = () => {
       setReload(false);
     }
   }, []);
+  // Reaching this page at all already required passing GiiS's own paid
+  // entitlement check - Postiz's own separate tier flags are not a real
+  // signal about this user's access when embedded, so these stay hidden
+  // (not redirected elsewhere) rather than sending the user away from Postd.
+  // See the equivalent, more detailed comment in new-layout/layout.component.tsx.
+  const shouldShowGenerator =
+    sortedIntegrations?.length > 0 &&
+    (isEmbedded || (user?.tier?.ai && billingEnabled));
+  const shouldShowLifetimeTier = billingEnabled && user?.isLifetime;
+
   const continueIntegration = useCallback(
     (integration: any) => async () => {
       router.push(
@@ -540,8 +552,7 @@ export const LaunchesComponent = () => {
               <div className="flex gap-[8px] group-[.sidebar]:flex-col">
                 {sortedIntegrations?.length > 0 && <NewPost />}
                 {sortedIntegrations?.length > 0 &&
-                  user?.tier?.ai &&
-                  billingEnabled && <GeneratorComponent />}
+                  shouldShowGenerator && <GeneratorComponent />}
               </div>
             </div>
             <div className="gap-[32px] flex flex-col select-none flex-1">
@@ -581,7 +592,7 @@ export const LaunchesComponent = () => {
               ))}
             </div>
             <div className="mt-[5px] text-center flex flex-col">
-              {billingEnabled && user?.isLifetime && (
+              {shouldShowLifetimeTier && !isEmbedded && (
                 <div>{capitalize(user?.tier?.current || '')} tier</div>
               )}
               <div>

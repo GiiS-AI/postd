@@ -21,6 +21,7 @@ import dayjs from 'dayjs';
 import { Select } from '@gitroom/react/form/select';
 import { useT } from '@gitroom/react/translation/get.transation.service.client';
 import { AddEditModal } from '@gitroom/frontend/components/new-launch/add.edit.modal';
+import { isEmbeddedInGiiS } from '@gitroom/frontend/components/billing/giis-billing-redirect';
 
 const FirstStep: FC = (props) => {
   const { integrations, reloadCalendarView } = useCalendar();
@@ -50,7 +51,17 @@ const FirstStep: FC = (props) => {
       // eslint-disable-next-line no-constant-condition
       while (true) {
         const { done, value } = await reader.read();
-        if (done) return lastResponse.data.output;
+        if (done) {
+          if (!lastResponse?.data?.output) {
+            throw new Error(
+              t(
+                'ai_generation_currently_unavailable',
+                'AI generation is currently unavailable'
+              )
+            );
+          }
+          return lastResponse.data.output;
+        }
 
         // Convert chunked binary data to string
         const chunkStr = decoder.decode(value, {
@@ -59,58 +70,64 @@ const FirstStep: FC = (props) => {
         for (const chunk of chunkStr
           .split('\n')
           .filter((f) => f && f.indexOf('{') > -1)) {
+          let data: any;
           try {
-            const data = JSON.parse(chunk);
-            switch (data.name) {
-              case 'agent':
-                setShowStep(t('agent_starting', 'Agent starting'));
-                break;
-              case 'research':
-                setShowStep(
-                  t('researching_your_content', 'Researching your content...')
-                );
-                break;
-              case 'find-category':
-                setShowStep(
-                  t(
-                    'understanding_the_category',
-                    'Understanding the category...'
-                  )
-                );
-                break;
-              case 'find-topic':
-                setShowStep(t('finding_the_topic', 'Finding the topic...'));
-                break;
-              case 'find-popular-posts':
-                setShowStep(
-                  t(
-                    'finding_popular_posts_to_match_with',
-                    'Finding popular posts to match with...'
-                  )
-                );
-                break;
-              case 'generate-hook':
-                setShowStep(t('generating_hook', 'Generating hook...'));
-                break;
-              case 'generate-content':
-                setShowStep(t('generating_content', 'Generating content...'));
-                break;
-              case 'generate-picture':
-                setShowStep(t('generating_pictures', 'Generating pictures...'));
-                break;
-              case 'upload-pictures':
-                setShowStep(t('uploading_pictures', 'Uploading pictures...'));
-                break;
-              case 'post-time':
-                setShowStep(
-                  t('finding_time_to_post', 'Finding time to post...')
-                );
-                break;
-            }
-            lastResponse = data;
+            data = JSON.parse(chunk);
           } catch (e) {
             /** don't do anything **/
+            continue;
           }
+          if (data.name === 'error') {
+            throw new Error(
+              data.data?.error ||
+                t(
+                  'ai_generation_currently_unavailable',
+                  'AI generation is currently unavailable'
+                )
+            );
+          }
+          switch (data.name) {
+            case 'agent':
+              setShowStep(t('agent_starting', 'Agent starting'));
+              break;
+            case 'research':
+              setShowStep(
+                t('researching_your_content', 'Researching your content...')
+              );
+              break;
+            case 'find-category':
+              setShowStep(
+                t('understanding_the_category', 'Understanding the category...')
+              );
+              break;
+            case 'find-topic':
+              setShowStep(t('finding_the_topic', 'Finding the topic...'));
+              break;
+            case 'find-popular-posts':
+              setShowStep(
+                t(
+                  'finding_popular_posts_to_match_with',
+                  'Finding popular posts to match with...'
+                )
+              );
+              break;
+            case 'generate-hook':
+              setShowStep(t('generating_hook', 'Generating hook...'));
+              break;
+            case 'generate-content':
+              setShowStep(t('generating_content', 'Generating content...'));
+              break;
+            case 'generate-picture':
+              setShowStep(t('generating_pictures', 'Generating pictures...'));
+              break;
+            case 'upload-pictures':
+              setShowStep(t('uploading_pictures', 'Uploading pictures...'));
+              break;
+            case 'post-time':
+              setShowStep(t('finding_time_to_post', 'Finding time to post...'));
+              break;
+          }
+          lastResponse = data;
         }
       }
     },
@@ -121,66 +138,91 @@ const FirstStep: FC = (props) => {
   }> = useCallback(
     async (value) => {
       setLoading(true);
-      const response = await fetch('/posts/generator', {
-        method: 'POST',
-        body: JSON.stringify(value),
-      });
-      if (!response.body) {
-        return;
-      }
-      const reader = response.body.getReader();
-      const load = await generateStep(reader);
-      const messages = load.content.map((p: any, index: number) => {
-        if (index === 0) {
+      try {
+        const response = await fetch('/posts/generator', {
+          method: 'POST',
+          body: JSON.stringify(value),
+        });
+        if (!response.ok) {
+          throw new Error(
+            t(
+              'ai_generation_currently_unavailable',
+              'AI generation is currently unavailable'
+            )
+          );
+        }
+        if (!response.body) {
+          throw new Error(
+            t(
+              'ai_generation_currently_unavailable',
+              'AI generation is currently unavailable'
+            )
+          );
+        }
+        const reader = response.body.getReader();
+        const load = await generateStep(reader);
+        const messages = load.content.map((p: any, index: number) => {
+          if (index === 0) {
+            return {
+              content: load.hook + '\n' + p.content,
+              ...(p?.image?.path
+                ? {
+                    image: [p.image],
+                  }
+                : {}),
+            };
+          }
           return {
-            content: load.hook + '\n' + p.content,
+            content: p.content,
             ...(p?.image?.path
               ? {
                   image: [p.image],
                 }
               : {}),
           };
-        }
-        return {
-          content: p.content,
-          ...(p?.image?.path
-            ? {
-                image: [p.image],
-              }
-            : {}),
-        };
-      });
-      setShowStep('');
-      modal.openModal({
-        id: 'add-edit-modal',
-        closeOnClickOutside: false,
-        removeLayout: true,
-        closeOnEscape: false,
-        withCloseButton: false,
-        askClose: true,
-        fullScreen: true,
-        classNames: {
-          modal: 'w-[100%] max-w-[1400px] text-textColor',
-        },
-        children: (
-          <AddEditModal
-            allIntegrations={integrations.map((p) => ({
-              ...p,
-            }))}
-            integrations={integrations.slice(0).map((p) => ({
-              ...p,
-            }))}
-            mutate={reloadCalendarView}
-            date={dayjs.utc(load.date).local()}
-            reopenModal={() => ({})}
-            onlyValues={messages}
-          />
-        ),
-        size: '80%',
-      });
-      setLoading(false);
+        });
+        setShowStep('');
+        modal.openModal({
+          id: 'add-edit-modal',
+          closeOnClickOutside: false,
+          removeLayout: true,
+          closeOnEscape: false,
+          withCloseButton: false,
+          askClose: true,
+          fullScreen: true,
+          classNames: {
+            modal: 'w-[100%] max-w-[1400px] text-textColor',
+          },
+          children: (
+            <AddEditModal
+              allIntegrations={integrations.map((p) => ({
+                ...p,
+              }))}
+              integrations={integrations.slice(0).map((p) => ({
+                ...p,
+              }))}
+              mutate={reloadCalendarView}
+              date={dayjs.utc(load.date).local()}
+              reopenModal={() => ({})}
+              onlyValues={messages}
+            />
+          ),
+          size: '80%',
+        });
+      } catch (err) {
+        setShowStep(
+          err instanceof Error
+            ? err.message
+            : t(
+                'ai_generation_currently_unavailable',
+                'AI generation is currently unavailable'
+              )
+        );
+      } finally {
+        setLoading(false);
+      }
     },
-    [integrations, reloadCalendarView]
+    [generateStep, integrations, reloadCalendarView, t]
   );
   return (
     <form
@@ -294,7 +336,11 @@ export const GeneratorComponent = () => {
   const modal = useModals();
   const all = useCalendar();
   const generate = useCallback(async () => {
-    if (!user?.tier?.ai) {
+    // Reaching this page at all already required passing GiiS's own paid
+    // entitlement check - Postiz's own separate tier flag isn't a real
+    // signal about this user's access when embedded. See the equivalent
+    // comment in new-layout/layout.component.tsx.
+    if (!isEmbeddedInGiiS() && !user?.tier?.ai) {
       if (
         await deleteDialog(
           t('upgrade_required', 'You need to upgrade to use this feature'),

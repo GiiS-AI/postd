@@ -46,6 +46,7 @@ import { PreConditionComponent } from '@gitroom/frontend/components/layout/pre-c
 import { AttachToFeedbackIcon } from '@gitroom/frontend/components/new-layout/sentry.feedback.component';
 import { FirstBillingComponent } from '@gitroom/frontend/components/billing/first.billing.component';
 import { TrialTracker } from '@gitroom/frontend/components/layout/gtm.component';
+import { isEmbeddedInGiiS } from '@gitroom/frontend/components/billing/giis-billing-redirect';
 
 const hankenGrotesk = Hanken_Grotesk({
   weight: ['600', '500', '700'],
@@ -71,19 +72,27 @@ export const LayoutComponent = ({ children }: { children: ReactNode }) => {
     refreshWhenHidden: false,
   });
 
-  if (!user) return null;
-
   // Embedded inside GiiS's own app (see /app/postd in the GiiS frontend): GiiS
   // already renders its own Calendar/Analytics/Media/Plugins/Integrations/
   // Settings sidebar section that drives which page loads in this iframe, so
   // this component's own icon-column nav would just be a second, disconnected
   // copy of the same navigation - clicking it wouldn't update GiiS's own
-  // sidebar highlighting. Safe to check window directly (no effect/state
-  // needed): this whole component only ever renders client-side, gated on
-  // `user` above, so there's no server-rendered version of this subtree to
-  // hydration-mismatch against.
-  const isEmbedded =
-    typeof window !== 'undefined' && window.self !== window.top;
+  // sidebar highlighting. Safe to check window directly: this subtree is
+  // client-side.
+  const isEmbedded = isEmbeddedInGiiS();
+  // Reaching this iframe at all already required passing GiiS's own paid
+  // entitlement check (the SSO bridge only redirects here for paying GiiS
+  // users) - Postiz's own separate FREE/paid tier is a leftover artifact of
+  // the SSO-provisioned account defaulting to FREE, not a real signal about
+  // this user's access. Never gate or redirect on it while embedded: earlier
+  // this redirected to GiiS's own billing page instead, which sounds safer
+  // but was actually worse in practice - it fired on every single embedded
+  // page load (since the FREE-tier default never changes) and made Postd
+  // completely unreachable. Embedded users should always see the normal app.
+  const shouldShowFirstBilling =
+    !isEmbedded && user?.tier === 'FREE' && isGeneral && billingEnabled;
+
+  if (!user) return null;
 
   return (
     <ContextWrapper user={user}>
@@ -111,7 +120,7 @@ export const LayoutComponent = ({ children }: { children: ReactNode }) => {
               )}
             >
               <div>{user?.admin ? <Impersonate /> : <div />}</div>
-              {user.tier === 'FREE' && isGeneral && billingEnabled ? (
+              {shouldShowFirstBilling ? (
                 <FirstBillingComponent />
               ) : (
                 <>

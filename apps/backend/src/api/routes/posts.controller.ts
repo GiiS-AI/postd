@@ -236,12 +236,31 @@ export class PostsController {
   @CheckPolicies([AuthorizationActions.Create, Sections.POSTS_PER_MONTH])
   async generatePosts(
     @GetOrgFromRequest() org: Organization,
+    @GetUserFromRequest() user: User,
     @Body() body: GeneratorDto,
     @Res({ passthrough: false }) res: Response
   ) {
     res.setHeader('Content-Type', 'application/json; charset=utf-8');
-    for await (const event of this._agentGraphService.start(org.id, body)) {
-      res.write(JSON.stringify(event) + '\n');
+    try {
+      for await (const event of this._agentGraphService.start(
+        org.id,
+        body,
+        user.providerId
+      )) {
+        res.write(JSON.stringify(event) + '\n');
+      }
+    } catch (err) {
+      res.write(
+        JSON.stringify({
+          name: 'error',
+          data: {
+            error:
+              err instanceof Error
+                ? err.message
+                : 'AI generation is currently unavailable',
+          },
+        }) + '\n'
+      );
     }
 
     res.end();

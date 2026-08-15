@@ -3,8 +3,6 @@ import { NotificationsRepository } from '@gitroom/nestjs-libraries/database/pris
 import { EmailService } from '@gitroom/nestjs-libraries/services/email.service';
 import { OrganizationRepository } from '@gitroom/nestjs-libraries/database/prisma/organizations/organization.repository';
 import { TemporalService } from 'nestjs-temporal-core';
-import { TypedSearchAttributes } from '@temporalio/common';
-import { organizationId } from '@gitroom/nestjs-libraries/temporal/temporal.search.attribute';
 
 export type NotificationType = 'success' | 'fail' | 'info';
 
@@ -70,12 +68,6 @@ export class NotificationService {
             taskQueue: 'main',
             workflowIdConflictPolicy: 'USE_EXISTING',
             args: [{ organizationId: orgId }],
-            typedSearchAttributes: new TypedSearchAttributes([
-              {
-                key: organizationId,
-                value: orgId,
-              },
-            ]),
           });
       } catch (err) {}
 

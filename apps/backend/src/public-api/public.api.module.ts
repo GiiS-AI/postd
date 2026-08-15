@@ -6,6 +6,7 @@ import { PermissionsService } from '@gitroom/backend/services/auth/permissions/p
 import { IntegrationManager } from '@gitroom/nestjs-libraries/integrations/integration.manager';
 import { UploadModule } from '@gitroom/nestjs-libraries/upload/upload.module';
 import { OpenaiService } from '@gitroom/nestjs-libraries/openai/openai.service';
+import { GiisLlmService } from '@gitroom/nestjs-libraries/openai/giis-llm.service';
 import { ExtractContentService } from '@gitroom/nestjs-libraries/openai/extract.content.service';
 import { CodesService } from '@gitroom/nestjs-libraries/services/codes.service';
 import { PublicIntegrationsController } from '@gitroom/backend/public-api/routes/v1/public.integrations.controller';
@@ -18,6 +19,7 @@ const authenticatedController = [PublicIntegrationsController];
   providers: [
     AuthService,
     StripeService,
+    GiisLlmService,
     OpenaiService,
     ExtractContentService,
     PoliciesGuard,
@@ -34,4 +36,3 @@ export class PublicApiModule implements NestModule {
     consumer.apply(PublicAuthMiddleware).forRoutes(...authenticatedController);
   }
 }
-

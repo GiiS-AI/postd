@@ -17,11 +17,6 @@ import { RefreshIntegrationService } from '@gitroom/nestjs-libraries/integration
 import { timer } from '@gitroom/helpers/utils/timer';
 import { IntegrationService } from '@gitroom/nestjs-libraries/database/prisma/integrations/integration.service';
 import { WebhooksService } from '@gitroom/nestjs-libraries/database/prisma/webhooks/webhooks.service';
-import { TypedSearchAttributes } from '@temporalio/common';
-import {
-  organizationId,
-  postId as postIdSearchParam,
-} from '@gitroom/nestjs-libraries/temporal/temporal.search.attribute';
 import { SubscriptionService } from '@gitroom/nestjs-libraries/database/prisma/subscriptions/subscription.service';
 
 // Drops fields the workflow and downstream activities never read — biggest wins are `error` (grows per retry) and `childrenPost` (Prisma side-loads it on every recursive row).
@@ -91,16 +86,6 @@ export class PostActivity {
               organizationId: post.organizationId,
             },
           ],
-          typedSearchAttributes: new TypedSearchAttributes([
-            {
-              key: postIdSearchParam,
-              value: post.id,
-            },
-            {
-              key: organizationId,
-              value: post.organizationId,
-            },
-          ]),
         });
     }
   }
@@ -257,12 +242,6 @@ export class PostActivity {
         workflowId: `streak_${integration.organizationId}`,
         taskQueue: 'main',
         workflowIdConflictPolicy: 'TERMINATE_EXISTING',
-        typedSearchAttributes: new TypedSearchAttributes([
-          {
-            key: organizationId,
-            value: integration.organizationId,
-          },
-        ]),
       });
 
     return postNow;

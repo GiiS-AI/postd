@@ -1,6 +1,7 @@
 import {
   BadRequestException,
   Injectable,
+  Logger,
   ValidationPipe,
 } from '@nestjs/common';
 import { PostsRepository } from '@gitroom/nestjs-libraries/database/prisma/posts/posts.repository';
@@ -37,11 +38,6 @@ import { OpenaiService } from '@gitroom/nestjs-libraries/openai/openai.service';
 dayjs.extend(utc);
 import * as Sentry from '@sentry/nestjs';
 import { TemporalService } from 'nestjs-temporal-core';
-import { TypedSearchAttributes } from '@temporalio/common';
-import {
-  organizationId,
-  postId as postIdSearchParam,
-} from '@gitroom/nestjs-libraries/temporal/temporal.search.attribute';
 import { AnalyticsData } from '@gitroom/nestjs-libraries/integrations/social/social.integrations.interface';
 import { timer } from '@gitroom/helpers/utils/timer';
 import { ioRedis } from '@gitroom/nestjs-libraries/redis/redis.service';
@@ -61,6 +57,7 @@ type PostWithConditionals = Post & {
 
 @Injectable()
 export class PostsService {
+  private readonly logger = new Logger(PostsService.name);
   private storage = UploadFactory.createStorage();
   constructor(
     private _postRepository: PostsRepository,
@@ -715,9 +712,19 @@ export class PostsService {
           ) {
             await workflow.terminate();
           }
-        } catch (err) {}
+        } catch (err) {
+          this.logger.error(
+            `Failed to terminate existing publish workflow ${executionInfo.workflowId} for post ${postId}`,
+            err instanceof Error ? err.stack : String(err)
+          );
+        }
       }
-    } catch (err) {}
+    } catch (err) {
+      this.logger.error(
+        `Failed to inspect running publish workflows for post ${postId}`,
+        err instanceof Error ? err.stack : String(err)
+      );
+    }
 
     if (state === 'DRAFT') {
       return;
@@ -737,18 +744,13 @@ export class PostsService {
               organizationId: orgId,
             },
           ],
-          typedSearchAttributes: new TypedSearchAttributes([
-            {
-              key: postIdSearchParam,
-              value: postId,
-            },
-            {
-              key: organizationId,
-              value: orgId,
-            },
-          ]),
         });
-    } catch (err) {}
+    } catch (err) {
+      this.logger.error(
+        `Failed to start publish workflow for post ${postId}`,
+        err instanceof Error ? err.stack : String(err)
+      );
+    }
   }
 
   /**

@@ -13,6 +13,7 @@ import { Button } from '@gitroom/react/form/button';
 import { useToaster } from '@gitroom/react/toaster/toaster';
 import { useVariables } from '@gitroom/react/helpers/variable.context';
 import { useT } from '@gitroom/react/translation/get.transation.service.client';
+import { redirectTopToGiiSBilling } from '@gitroom/frontend/components/billing/giis-billing-redirect';
 const GenerateTab = observer(({ store }: any) => {
   const inputRef = React.useRef<any>(null);
   const [image, setImage] = React.useState(null);
@@ -37,6 +38,9 @@ const GenerateTab = observer(({ store }: any) => {
 
   const handleGenerate = async () => {
     if (data?.credits <= 0) {
+      if (redirectTopToGiiSBilling()) {
+        return;
+      }
       window.open('/billing', '_blank');
       return;
     }

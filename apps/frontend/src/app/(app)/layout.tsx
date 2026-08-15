@@ -40,6 +40,26 @@ export default async function AppLayout({ children }: { children: ReactNode }) {
   return (
     <html>
       <head>
+        {/*
+          Postd's own Stripe billing UI must never activate while embedded in
+          GiiS (GiiS's own paid entitlement already gates access to Postd -
+          Postiz's separate Stripe checkout showing up on top of that is
+          confusing double-billing UI, not a feature). Multiple attempts to
+          patch the specific React call site that was triggering
+          js.stripe.com to load turned out to target the wrong spot (the bug
+          persisted even after those gates were confirmed unreachable) - this
+          blocks the actual browser-level mechanism instead: any attempt to
+          inject a <script src="https://js.stripe.com/..."> tag while
+          embedded, regardless of which component tries to do it. Must run
+          synchronously before any other script on the page, hence a raw
+          inline <script> as the very first head child rather than
+          next/script (which defers).
+        */}
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `(function(){try{if(window.self===window.top)return;function isStripeScript(n){return n&&n.tagName==='SCRIPT'&&typeof n.src==='string'&&n.src.indexOf('js.stripe.com')!==-1;}var origAppend=Node.prototype.appendChild;Node.prototype.appendChild=function(n){if(isStripeScript(n)){console.warn('[GiiS] blocked stripe.js load while embedded');return n;}return origAppend.call(this,n);};var origInsert=Node.prototype.insertBefore;Node.prototype.insertBefore=function(n,r){if(isStripeScript(n)){console.warn('[GiiS] blocked stripe.js load while embedded');return n;}return origInsert.call(this,n,r);};}catch(e){}})();`,
+          }}
+        />
         <link rel="icon" href="/favicon.ico" sizes="any" />
         {!!process.env.DATAFAST_WEBSITE_ID && (
           <Script

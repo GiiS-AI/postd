@@ -15,17 +15,12 @@ import { z } from 'zod';
 import { MediaService } from '@gitroom/nestjs-libraries/database/prisma/media/media.service';
 import { UploadFactory } from '@gitroom/nestjs-libraries/upload/upload.factory';
 import { GeneratorDto } from '@gitroom/nestjs-libraries/dtos/generator/generator.dto';
+import { createGiisPostdToken } from '@gitroom/nestjs-libraries/openai/giis-llm.service';
 
 const tools = !process.env.TAVILY_API_KEY
   ? []
   : [new TavilySearch({ maxResults: 3 })];
 const toolNode = new ToolNode(tools);
-
-const model = new ChatOpenAI({
-  apiKey: process.env.OPENAI_API_KEY || 'sk-proj-',
-  model: 'gpt-4.1',
-  temperature: 0.7,
-});
 
 const dalle = new DallEAPIWrapper({
   apiKey: process.env.OPENAI_API_KEY || 'sk-proj-',
@@ -131,7 +126,7 @@ export class AgentGraphService {
       },
     });
 
-  async startCall(state: WorkflowChannelsState) {
+  async startCall(state: WorkflowChannelsState, model: ChatOpenAI) {
     const runTools = model.bindTools(tools);
     const response = await ChatPromptTemplate.fromTemplate(
       `
@@ -154,7 +149,7 @@ export class AgentGraphService {
     return { fresearch: content };
   }
 
-  async findCategories(state: WorkflowChannelsState) {
+  async findCategories(state: WorkflowChannelsState, model: ChatOpenAI) {
     const allCategories = await this._postsService.findAllExistingCategories();
     const structuredOutput = model.withStructuredOutput(category);
     const { category: outputCategory } = await ChatPromptTemplate.fromTemplate(
@@ -175,7 +170,7 @@ export class AgentGraphService {
     };
   }
 
-  async findTopic(state: WorkflowChannelsState) {
+  async findTopic(state: WorkflowChannelsState, model: ChatOpenAI) {
     const allTopics = await this._postsService.findAllExistingTopicsOfCategory(
       state?.category!
     );
@@ -210,7 +205,7 @@ export class AgentGraphService {
     return { popularPosts };
   }
 
-  async generateHook(state: WorkflowChannelsState) {
+  async generateHook(state: WorkflowChannelsState, model: ChatOpenAI) {
     const structuredOutput = model.withStructuredOutput(hook);
     const { hook: outputHook } = await ChatPromptTemplate.fromTemplate(
       `
@@ -252,7 +247,7 @@ export class AgentGraphService {
     };
   }
 
-  async generateContent(state: WorkflowChannelsState) {
+  async generateContent(state: WorkflowChannelsState, model: ChatOpenAI) {
     const structuredOutput = model.withStructuredOutput(
       contentZod(!!state.isPicture, state.format)
     );
@@ -370,17 +365,36 @@ export class AgentGraphService {
     return { date: await this._postsService.findFreeDateTime(state.orgId) };
   }
 
-  start(orgId: string, body: GeneratorDto) {
+  private createAgentModel(giisUserId?: string | null) {
+    if (!giisUserId) {
+      throw new Error('AI generation is only available for GiiS SSO users');
+    }
+    if (!process.env.GIIS_BACKEND_URL) {
+      throw new Error('AI generation is currently unavailable');
+    }
+
+    return new ChatOpenAI({
+      apiKey: createGiisPostdToken(giisUserId),
+      model: 'postd-agent',
+      temperature: 0.7,
+      configuration: {
+        baseURL: `${process.env.GIIS_BACKEND_URL.replace(/\/$/, '')}/api/postd/v1`,
+      },
+    });
+  }
+
+  start(orgId: string, body: GeneratorDto, giisUserId?: string | null) {
     const state = AgentGraphService.state();
+    const model = this.createAgentModel(giisUserId);
     const workflow = state
-      .addNode('agent', this.startCall.bind(this))
+      .addNode('agent', (state) => this.startCall(state, model))
       .addNode('research', toolNode)
       .addNode('save-research', this.saveResearch.bind(this))
-      .addNode('find-category', this.findCategories.bind(this))
-      .addNode('find-topic', this.findTopic.bind(this))
+      .addNode('find-category', (state) => this.findCategories(state, model))
+      .addNode('find-topic', (state) => this.findTopic(state, model))
       .addNode('find-popular-posts', this.findPopularPosts.bind(this))
-      .addNode('generate-hook', this.generateHook.bind(this))
-      .addNode('generate-content', this.generateContent.bind(this))
+      .addNode('generate-hook', (state) => this.generateHook(state, model))
+      .addNode('generate-content', (state) => this.generateContent(state, model))
       .addNode('generate-content-fix', this.fixArray.bind(this))
       .addNode('generate-picture', this.generatePictures.bind(this))
       .addNode('upload-pictures', this.uploadPictures.bind(this))
