@@ -373,7 +373,7 @@ export const WeekView = () => {
               key={day.name}
               className="p-2 text-center bg-newTableHeader flex justify-center items-center flex-col h-[62px] rounded-[8px] sticky top-0 z-[20]"
             >
-              <div className="text-[14px] font-[500] text-newTableText">
+              <div className="text-[14px] font-[500] text-newTableTextFocused">
                 {day.name}
               </div>
               <div
@@ -392,7 +392,7 @@ export const WeekView = () => {
           ))}
           {hours.map((hour) => (
             <Fragment key={hour}>
-              <div className="p-2 pe-4 text-center items-center justify-center flex text-[14px] text-newTableText">
+              <div className="p-2 pe-4 text-center items-center justify-center flex text-[14px] text-newTableTextFocused">
                 {convertTimeFormatBasedOnLocality(hour)}
               </div>
               {localizedDays.map((day, indexDay) => (
@@ -918,7 +918,7 @@ export const CalendarColumn: FC<{
               {display !== 'day' && (
                 <div
                   className={clsx(
-                    'group hover:before:h-[30px] w-full h-full rounded-[10px] flex justify-center items-center text-white'
+                    'group hover:before:h-[30px] w-full h-full rounded-[10px] flex justify-center items-center text-white group-hover:text-btnText'
                   )}
                 >
                   <div
@@ -1066,7 +1066,7 @@ const CalendarItem: FC<{
       )}
       <div
         className={clsx(
-          'text-white text-[11px] max-h-[24px] h-[24px] min-h-[24px] w-full rounded-tr-[10px] rounded-tl-[10px] flex items-center justify-center gap-[10px] px-[5px] bg-btnPrimary'
+          'text-btnText text-[11px] max-h-[24px] h-[24px] min-h-[24px] w-full rounded-tr-[10px] rounded-tl-[10px] flex items-center justify-center gap-[10px] px-[5px] bg-btnPrimary'
         )}
         style={{
           backgroundColor: post?.tags?.[0]?.tag?.color,
