@@ -32,6 +32,7 @@ export class SsoBridgeController {
         externalId: string;
         expires: number;
         redirectPath?: string;
+        theme?: string;
       };
 
       if (!payload?.email || !payload?.externalId || !payload?.expires) {
@@ -97,6 +98,22 @@ export class SsoBridgeController {
       if (process.env.NOT_SECURED) {
         response.header('auth', jwt);
       }
+
+      // Carries GiiS's current theme into Postd on every embed load, so the
+      // two don't drift into independent toggles - domain-scoped the same
+      // way as the auth cookie above (not httpOnly: mode.component.tsx and
+      // every other `useCookie('mode', ...)` call site reads this via
+      // document.cookie).
+      response.cookie('mode', payload.theme === 'light' ? 'light' : 'dark', {
+        domain: getCookieUrlFromDomain(process.env.FRONTEND_URL!),
+        ...(!process.env.NOT_SECURED
+          ? {
+              secure: true,
+              sameSite: 'none' as const,
+            }
+          : {}),
+        expires: new Date(Date.now() + 1000 * 60 * 60 * 24 * 365),
+      });
 
       response.redirect(process.env.FRONTEND_URL! + safeRedirectPath);
     } catch (err) {

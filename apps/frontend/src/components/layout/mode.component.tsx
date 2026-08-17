@@ -8,6 +8,11 @@ export const modeEmitter = new EventEmitter();
 
 const ModeComponent = () => {
   const [mode, setMode] = useCookie('mode', 'dark');
+  // When embedded inside GiiS's iframe, the theme already arrives via the
+  // SSO bridge's `mode` cookie on every load and is meant to follow GiiS's
+  // own setting - showing this toggle too would let it drift into a second,
+  // independent control that overwrites that cookie with a host-only value.
+  const [isEmbedded, setIsEmbedded] = useState(false);
 
   const changeMode = useCallback(() => {
     modeEmitter.emit('mode', mode === 'dark' ? 'light' : 'dark');
@@ -18,6 +23,15 @@ const ModeComponent = () => {
     document.body.classList.remove('dark', 'light');
     document.body.classList.add(mode);
   }, [mode]);
+
+  useEffect(() => {
+    setIsEmbedded(window.self !== window.top);
+  }, []);
+
+  if (isEmbedded) {
+    return null;
+  }
+
   return (
     <div onClick={changeMode} className="select-none cursor-pointer">
       {mode === 'dark' ? (
