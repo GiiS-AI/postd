@@ -115,7 +115,14 @@ export const LayoutComponent = ({ children }: { children: ReactNode }) => {
             <ContinueProvider />
             <div
               className={clsx(
-                'flex flex-col min-h-screen min-w-screen text-newTextColor p-[12px]',
+                'flex flex-col min-h-screen min-w-screen text-newTextColor',
+                // This padding (and the rounded "floating card" treatment
+                // below) exists to frame Postd's own sidebar+header as a
+                // distinct panel inset from the page edge. When embedded in
+                // GiiS's iframe, that chrome is hidden (see isEmbedded
+                // checks below) - keeping the padding then just leaves an
+                // empty margin around nothing, so it's dropped here too.
+                !isEmbedded && 'p-[12px]',
                 hankenGrotesk.className
               )}
             >
@@ -143,7 +150,14 @@ export const LayoutComponent = ({ children }: { children: ReactNode }) => {
                         </div>
                       </div>
                     )}
-                    <div className="flex-1 bg-newBgLineColor rounded-[12px] overflow-hidden flex flex-col gap-[1px] blurMe">
+                    <div
+                      className={clsx(
+                        'flex-1 overflow-hidden flex flex-col blurMe',
+                        isEmbedded
+                          ? 'bg-newBgColor'
+                          : 'bg-newBgLineColor rounded-[12px] gap-[1px]'
+                      )}
+                    >
                       {!isEmbedded && (
                         <div className="flex bg-newBgColorInner h-[80px] px-[20px] items-center">
                           <div className="text-[24px] font-[600] flex flex-1">
