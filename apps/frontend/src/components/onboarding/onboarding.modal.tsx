@@ -214,7 +214,7 @@ const OnboardingStep1: FC<{ onNext: () => void; onSkip: () => void }> = ({
       <div className="flex justify-end pt-[24px] mt-[8px]">
         <button
           onClick={onNext}
-          className="group flex items-center gap-[12px] bg-gradient-to-r from-[#622aff] to-[#8b5cf6] hover:from-[#7c3aff] hover:to-[#9d6eff] text-white font-semibold px-[32px] py-[14px] rounded-[12px] text-[16px] transition-all shadow-lg shadow-purple-500/25 hover:shadow-purple-500/40"
+          className="group flex items-center gap-[12px] bg-[color:var(--new-btn-primary)] hover:opacity-90 text-[color:var(--new-btn-text)] font-semibold px-[32px] py-[14px] rounded-[12px] text-[16px] transition-all"
         >
           {sortedIntegrations.length > 0
             ? t('continue', 'Continue')
@@ -298,7 +298,7 @@ const OnboardingStep2: FC<{ onBack: () => void; onFinish: () => void }> = ({
         </button>
         <button
           onClick={onFinish}
-          className="group flex items-center gap-[12px] bg-gradient-to-r from-[#10b981] to-[#059669] hover:from-[#34d399] hover:to-[#10b981] text-white font-semibold px-[32px] py-[14px] rounded-[12px] text-[16px] transition-all shadow-lg shadow-emerald-500/25 hover:shadow-emerald-500/40"
+          className="group flex items-center gap-[12px] bg-[color:var(--new-btn-primary)] hover:opacity-90 text-[color:var(--new-btn-text)] font-semibold px-[32px] py-[14px] rounded-[12px] text-[16px] transition-all"
         >
           {t('get_started', 'Get Started')}
           <svg
